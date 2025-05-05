@@ -1,0 +1,6 @@
+smolagents==1.14.0
+mcp==1.6.0
+starlette
+uvicorn
+openai
+notebook
