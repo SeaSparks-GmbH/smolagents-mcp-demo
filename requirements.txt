@@ -1,6 +1,8 @@
 smolagents==1.14.0
+smolagents[mcp]
 mcp==1.6.0
 starlette
 uvicorn
-openai
 notebook
+pymupdf
+rapidfuzz

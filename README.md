@@ -1,10 +1,15 @@
 # Minimal Smolagents MCP Demo
 
-This repository demonstrates how to use the **Model Context Protocol (MCP)** with multiple independent servers, a custom client, and an LLM-based host — all without relying on higher-level libraries like `FastMCP` but using lower-level methods of the MCP Python SDK.
+This repository demonstrates how to use HuggingFace’s lightweight Smolagents framework together with a custom Model Context Protocol (MCP) server — without relying on higher-level abstractions like `FastMCP`.
 
+It features:
+- A self-documenting MCP server exposing tools for a document library
+- A Smolagents `MCPClient`, connecting seamlessly to the server
+- A minimal `CodeAgent`-based MCP host, powered by an LLM, that calls tools, interprets outputs, and solves user queries through iterative Python code execution
+
+The server components rely on the low-level MCP Python SDK to stay close to the protocol itself and remain fully transparent.
 It accompanies the Medium article:
-
-**[MCP From a Slightly Different Angle — How to Build A Local Multi-Server System Without FastMCP](https://medium.com/@your-handle/your-article-slug)**
+**[Taking MCP for a Spin, the Smol Way]()**
 
 ---
 
@@ -20,20 +25,18 @@ pip install -r requirements.txt
 
 ---
 
-## Start the Servers
+## Start the Server
 
-Either use the "Start server" cells provided in the notebook (`host.ipynb`) or start each server in a separate terminal:
+Either use the "Start server" cell provided in the notebook (`host.ipynb`) or start the server in a separate terminal:
 
 ```bash
-python math_server.py
-python weather_server.py
+python library_server.py
 ```
 
 By default:
-- MathServer runs on port `58000`
-- WeatherServer runs on port `58001`
+- DocumentServer runs on port `58002`
 
-To use different ports, update the `.py` files accordingly.
+To use a different port, update the `.py` files and notebook cells accordingly.
 
 ---
 
@@ -42,21 +45,36 @@ To use different ports, update the `.py` files accordingly.
 Open `host.ipynb` in Jupyter, execute the cells and try, e.g.:
 
 ```python
-await run_host_query("How many hours are in 5 days?")
-await run_host_query("What's the weather like in Berlin?")
+run_host_query("Which documents are available?")
+run_host_query("Give me a summary of the quantum squirrel report, please.")
 ```
 
-The LLM will select the correct tool and the host will return the result from the tool call using MCP.
+The agent will automatically select the appropriate tool, using MCP under the hood, and on this basis answer the query.
 
 ---
 
 ## Contents
 
-- `math_server.py`: MCP server with `add` and `multiply` tools  
-- `weather_server.py`: MCP server with `get_weather` tool that provides fake weather information
-- `client.py`: Client that connects to multiple servers  
-- `host.ipynb`: Interactive host logic using OpenAI  
+- `library_server.py`: MCP document server with `get_library` and `get_document` tools
+- `build_mcp_tool_schema.py`: Helper function to create MCP tool metadata from docstring-based definitions
+- `host.ipynb`: Interactive agent host logic using Smolagents and OpenAI
 - `requirements.txt`: Dependencies
+- `library/`: Directory with the documents to be served by the library server
+
+---
+
+## License and Usage
+
+This repository is licensed under the [Creative Commons BY-NC 4.0 License](https://creativecommons.org/licenses/by-nc/4.0/).  
+It is intended for educational and non-commercial use.
+
+**Note:** Dependencies (listed in `requirements.txt`) are used via pip and are **not redistributed** in this repository.  
+Each retains its original license, typically Apache 2.0, MIT, BSD, or AGPL (e.g., `pymupdf`).  
+If you plan to use this repository or its components in a commercial setting, please consult the respective licenses.
+
+This license applies only to the original code and content included in this repository.
+It does not apply to third-party libraries or tools installed at runtime,
+which are governed by their own respective licenses.
 
 ---
 
@@ -64,13 +82,3 @@ The LLM will select the correct tool and the host will return the result from th
 
 For questions or feedback, feel free to reach out:
 [Email us](mailto:kontakt@seasparks.de)
-
-## License
-
-This repository is licensed under the Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0) license.
-You are free to share and adapt the contents of this repository for non-commercial purposes, provided that appropriate credit is given.
-For full details, see the LICENSE file.
-
-**Note:** This license applies only to the original code and content included in this repository.
-It does not apply to third-party libraries or tools installed at runtime,
-which are governed by their own respective licenses.
