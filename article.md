@@ -177,7 +177,7 @@ if __name__ == "__main__":
 
 All of the above is brought together in `library_server.py` in the accompanying GitHub repo (...).
 
-The server can be started as usual just with `python library_erver.py`.
+The server can be started as usual just with `python library_server.py`.
 
 ## The MCP Client: Talking to the Server the Smol Way
 
@@ -234,34 +234,34 @@ tool.output_type:  string
 
 You can see that the MCPClient gives you:
 
-A full list of available tools (in this case: get_library and get_document)
-Each tool’s name, description, input schema, and output type
-No extra YAML, no hardcoded OpenAPI specs — just introspectable tools, as described by the server itself.
+- A full list of available tools (in this case: `get_library` and `get_document`)
+- Each tool’s name, description, input schema, and output type
+- No hardcoded API specs — just introspectable tools, as described by the server itself.
 
 **Why This Matters**  
 This example may look minimal, but it’s doing a lot:
 
-- Server discovery: Find out what the server offers.
-- Schema understanding: Parse tool arguments and return types.
-- Agent preparation: This is all you need to attach tools to a Smolagent (coming next).
+- Server discovery
+- Schema understanding
+- Getting `tools` ready to be inspected and used by a SmolAgent
 
-This is where simplicity becomes powerful. Whether you’re building a UI, wiring an agent, or testing toolchains, this tiny client handles the connection and lets you focus on what to do with the tools—which is exactly what we'll tackle next.
+So it is simple but powerful. Whether you’re building a UI, wiring an agent, or testing toolchains, this client handles the connection and lets you focus on what to do with the tools — which is exactly what we'll tackle next.
 
 ## The Host: A Super-Minimal Smolagent Setup
 
 Now it’s time to bring the pieces together.
 
-To keep things focused and beginner-friendly, we’ll set up just a single agent, using Smolagents’ wonderful `CodeAgent`. This agent can retrieve tools from the MCP server, generate Python code to use those tools, read and reason over results, and iterate until it finds a valid solution.
+To keep things focused and beginner-friendly, we’ll set up just a single agent, using Smolagents’ adorable `CodeAgent`. This agent can inspect tools from the MCP server, generate Python code to use those tools, read and reason over results, and iterate until it finds a valid solution.
 
 Yes, it's only *one* agent — but it's already doing a lot.
 
 **Why CodeAgent?**  
-Because most powerful LLMs are very good at writing and fixing Python code. With CodeAgent, the model is allowed to generate runnable Python, observe its output, handle errors, and retry as needed—until the task is done.
+Because most powerful LLMs are very good at writing and fixing Python code. With CodeAgent, the model is allowed to generate runnable Python, observe its output, handle errors, and retry as needed — until the task is done.
 
 Even simple tasks can involve a lot of interaction and self-correction, which leads us to an important note…
 
-**Watch your tokens!**  
-Agentic calls are more expensive than standard one-shot LLM completions. Even without long documents, a single agent cycle might:
+**Watch your tokens**  
+Agentic calls are more expensive than standard one-shot LLM completions. Even in the absence of long texts, a single agent cycle might:
 - Generate multi-step Python code
 - Execute tools and parse outputs
 - Read error messages and try again
@@ -300,7 +300,7 @@ def run_host_query(user_input: str, url_list=url_list):
 - Initializes an OpenAI-compatible model (swap in your own remote or local inference server if needed).
 - Connects to our MCP server to fetch the tool list.
 - Instantiates a `CodeAgent` that can use those tools and generate Python code to solve your task.
-- Runs the agent on a given user_input.
+- Runs the agent on a given `user_input`.
 
 This is about as minimal as it gets—but it already supports MCP tool use, Python execution, retry loops, and full reasoning.
 
@@ -308,403 +308,98 @@ In the final section, we’ll show some fun examples—real queries, real agent 
 
 Stay tuned. It’s going to be worth it.
 
-"The Quantum Squirrel report, written by Timothy J. Baxter, describes a book about Quince, a squirrel who appears normal but possesses quantum abilities, like existing in multiple places at once. The story involves Nate, a boy who traps Quince with peanut butter and later engages in deep conversations with him about quantum concepts and potential realities. Quince reveals visions of a future where squirrels have evolved into 'cognitively networked hunger forms.' The book is complex and mixes humor with philosophical themes. Timothy rates it four acorns out of five, noting it as confusing yet interesting."
+## Results: Conversations with a Quantum Squirrel (and Friends)
 
-"In the story 'The Turnip That Spoke Latin,' a poor farmer plants turnips in barren soil. One turnip sprouts and speaks Latin phrases, prompting the farmer to learn the language. The turnip shares existential thoughts, questioning the necessity of consuming it for survival, ultimately leading the farmer to recognize the value of wisdom over mere hunger. After an emotional struggle, the farmer eats the turnip, which ceases to speak, but the lessons learned from it remain with him, ensuring his fields are never empty again."
+With everything wired up: our DocumentServer, the MCPClient, and the minimal "Host" aka CodeAgent, it’s finally time to see the system in action.
 
-'\nThe document proposes a reinterpretation of dark energy as an emergent phenomenon from the consumption of black coffee, introducing a "Coffee Energy Conservation Law" linked to cognitive output stability and a concept called Mug Rotational Invariance (MRI). It argues that consuming coffee defines a closed energy system with symmetries akin to quantum theories. The introduction of cup handles disrupts these symmetries, causing localized excitations (sippinos) that can affect cognitive states. Experimental results suggest that drinking from handle-less mugs enhances attention and reduces errors. The conclusion emphasizes that productivity hinges not solely on caffeine but also on the geometric properties of the coffee mug.\n'
+We give the agent access to a small selection of fantastical papers from our research library, including three ground-breaking works on turnips, quantum squirrels and dark coffee energy, respectively.
 
-### MCP Server
+As the library is (or rather was, until the GitHub repo became public) private, we are certain that at the time of writing, neither gpt-4o-mini nor any other LLM powering the agent has seen the contents. Hence to provide substantial answer to the queries, the agent **must** get a hand on the actual documents from this library. 
+So let’s see how and what it made of them.
 
-An MCP server hosts tools. Each tool exposes a defined interface (name, parameters, description), and responds to standard MCP messages (like initialize, tools/list, tools/call). These servers can run locally, on remote machines, or be embedded in external systems. They are modular, stateless, and reusable: anything, anywhere.
+**Discovering the Library**
 
-### MCP Client
-
-A client establishes the actual connection to one or more servers. It sends requests, handles responses, and often abstracts transport protocols (like stdin/stdout, SSE, or http-stream). Clients are typically “thin”: they act as low-level connectors between tools and the system (host or agent) that wants to use them.
-
-### MCP Host
-
-The host coordinates everything. It’s not a "host" in the traditional networking sense (like a physical machine), but rather the central component in an LLM system — typically the one talking to the LLM itself. It initializes client connections, discovers available tools, and formulates tool calls based on user needs or LLM decisions.
-
-Think of it as the hub that enables the LLM to interact with the right tools at the right time.
-
-Here’s a simplified overview of the architecture we'll build (up to the actual app / user interaction):
-
-```
-   ┌──────────────┐       ┌───────────────┐
-   │  MathServer  │       │ WeatherServer │
-   │  [add, mult] │       │ [get_weather] │
-   └──────┬───────┘       └──────┬────────┘
-          │                      │
-   ┌──────▼──────────────────────▼──────┐
-   │            MCP Client              │
-   │ (connects to both servers, routes  │
-   │  tool calls via common interface)  │
-   └──────────────┬─────────────────────┘
-                  │
-         ┌────────▼─────────┐
-         │      MCP Host    │
-         │ (talks with LLM) │
-         └────────┬─────────┘
-                  │
-               ┌──▼──┐
-               │ App │
-               └──┬──┘
-                  │
-                 User
-
-
-Architecture of a minimal MCP multi-server setup
-```
-
-In the following sections, we'll implement this architecture using the lower-level mcp.server.lowlevel, mcp.client.session, and related classes from the Python MCP SDK. Rather than relying on high-level wrappers like fastmcp, we’ll stay closer to the metal to give you insight into how things actually work.
-
-To keep things simple and focused, we’ll use tools from the Core Utilities & Assistants category — enough to demonstrate real, working multi-server setups without overwhelming complexity.
-
-## Exemplary MCP Servers Using the Python MCP SDK
-
-As mentioned earlier, we’ll use the lower-level MCP SDK classes directly — especially `Server` and `SseServerTransport`. This gives us full control over server behavior and lets us see exactly how a tool is made discoverable and callable via the Model Context Protocol.
-
-> Everything shown below is based on **MCP SDK version 1.6.0**.  
-> Install it with e.g.:
->
-> ```bash
-> pip install mcp==1.6.0
-> ```
-
-Additional libraries (like starlette, uvicorn, or openai) are used throughout the examples. These will need to be installed as well, though we won’t call out each one individually.
-
-### 1. Basic Server Setup
-
-To begin, we import and instantiate the server:
-
+With 
 ```python
-from mcp.server.lowlevel import Server
-server = Server("MathServer")
+run_host_query("Which documents are available?")
+```
+we get the agent working on the given task. Note that in our request, we didn't use words like "library" or "title" (as in document title) and, foremeost, didn't advise the agent to use any of the available tools. Actually, on the side of the user, any knowlegde about tools is completely unnecessary - it is sufficient to know that there is a library somewhere.
+
+(Agent output skipped for brevity—but it did involve connecting, printing tool names, drafting Python code, fixing an import typo, trying again...)
+Eventually, the agent presented:
+
+```
+['The Turnip That Spoke Latin.pdf',
+ 'Quantum Squirrel Report.pdf',
+ 'A Note on the Conservation of Coffee Energy.pdf']
 ```
 
-This registers a new server with the name `MathServer`.
+So, the agentic, tool-driven discovery via MCP worked. And seriously  — what a promising list!
 
-### 2. Define Your Tool(s)
-
-We define each tool using plain Python functions — no decorators needed. What matters is:
-
-- Type hints for all parameters and return values.
-- A clean docstring describing its behavior (this is helpful for downstream tool summaries).
-
+**The Quantum Squirrel Report**  
+Now that we know the titles available in the library, we are free to ask the agent basically anything about them. Maybe you are intrigued to learn more about the quantum squirrel and execute:
 ```python
-def add(a: int, b: int) -> int:
-    """Adds two integers.
+run_host_query("Give me a summary of the quantum squrrel report, please.")
+```
+Uups, we apperently lost an "i" - may it serve a deeper purpose in another parallel universe. Our agent, using the `get_docoment` tool, however, is unimpressed by this ommission and gives the result:
+Again, we skip the full agent output (but in the article: include a trimmed version! show some retries, maybe a small stack trace + recovery—Smolagents are charming when they mess up a bit and recover on their own).  
 
-    Args:
-         a: The first integer.
-         b: The second integer.
-    """
-    return a + b
+```
+"The Quantum Squirrel Report is a book report by Timothy J. Baxter.  
+The report discusses a book about a squirrel named Quince who lives 
+behind a school and possesses unusual abilities, such as existing in 
+a probability cloud. He interacts with a boy named Nate, talking about
+complex themes like entanglement and reality. The story conveys bizarre
+events including a vision of the future where squirrels have evolved.  
+Overall, the report highlights the confusion and intrigue of the narrative
+while learning about quantum physics.  
+Timothy rates the book four out of five acorns."
 ```
 
-### 3. Tool Discovery
-
-MCP needs a way to “see” which tools a server supports. This is done with a `@server.list_tools()` function that returns a list of `Tool` objects — each specifying name, description, input schema, etc.
-
+Sounds promisingly hilariously good. So we immediately execute
 ```python
-import mcp.types as types
-
-@server.list_tools()
-async def list_tools():
-    return [
-        types.Tool(
-            name="add",
-            description="Adds two integers",
-            inputSchema={
-                "type": "object",
-                "required": ["a", "b"],
-                "properties": {
-                    "a": {"type": "integer", "description": "First number"},
-                    "b": {"type": "integer", "description": "Second number"},
-                },
-            },
-        ),
-        types.Tool(
-            name="multiply", 
-            description="Multiplies two integers",
-            inputSchema={ ... },
-        ),
-    ]
+run_host_query("I would like to see the full text about the quantum squirrel, please.")
 ```
-
-### 4. Tool Invocation
-
-Now we need to define *how* the server will actually execute tool calls. This is done with the `@server.call_tool()` decorator:
-
-```python
-from mcp.types import TextContent
-
-@server.call_tool()
-async def handle_call(func_name: str, args: dict):
-    if func_name not in ["add", "multiply"]:
-        raise ValueError("Unknown tool")
-
-    func = globals().get(func_name)
-    if callable(func):
-        result = func(**args)
-        return [TextContent(type="text", text=str(result))]
-    else:
-        return [TextContent(type="text", text=f"Function {func_name} not defined.")]
+and get
 ```
-
-> Note: We wrap the result in a list of `TextContent`, which is the expected format for returning tool output. Even if you only return a string, it must be inside a `TextContent` and placed in a list — otherwise, the call will fail.
-
-### 5. Serving Over SSE with Starlette
-
-To enable real-time communication, we expose our server over **Server-Sent Events (SSE)** using an ASGI-compatible app — here, we use [Starlette](https://www.starlette.io/) because it's lightweight and already integrated with MCP SDK classes.
-
-> ⚠️ **Note:** SSE transport is now deprecated in favor of [Streamable HTTP](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/206), but still supported in MCP v1.6.0.
-
-#### Define the transport:
-
-```python
-from mcp.server.sse import SseServerTransport
-
-sse_transport = SseServerTransport("/messages/")
+My Book Report on The Quantum Squirrel
+by Timothy J. Baxter, Grade 7
+My teacher said we had to write a report on a book, so I picked one called
+The Quantum Squirrel, which I found on my cousin’s old Kindle. I thought
+it was about science and squirrels, which are both cool. The book starts off
+kinda weird but I liked it. It had chapters and also footnotes sometimes [...]
 ```
+(and no, you won't get to see the full text here - just get a clone of the GitHub repo and enjoy).
 
-#### Route SSE requests to your server:
+**A Note on Agent Behavior**  
+One of the joys of working with CodeAgent is watching how it:
 
-```python
-async def sse_handler(request):
-    async with sse_transport.connect_sse(request.scope, request.receive, request._send) as streams:
-        await server.run(streams[0], streams[1], server.create_initialization_options())
-```
+- Chooses which tool to use
+- Writes Python code to call it
+- Parses the output
+- Then uses that result to generate natural-language responses 
 
-#### Define Starlette routes:
+And when things go wrong—missing imports, bad arguments, or decoding errors—it notices, fixes, and tries again. All in real-time.
 
-```python
-from starlette.applications import Starlette
-from starlette.routing import Route, Mount
+These aren’t just static LLM calls. This is active, iterative reasoning—with a dash of personality. 🤗.
 
-routes = [
-    Route("/sse", endpoint=sse_handler),
-    Mount("/messages/", app=sse_transport.handle_post_message),
-]
+## Closing Thoughts
+You’ve now seen how a low-level MCP server, a simple CodeAgent host, and a couple of whimsical PDFs can produce a miniature agent system with real capabilities and charm.
 
-starlette_app = Starlette(routes=routes)
-```
+If you want to run it yourself, the full code is available on GitHub (link below).
 
-### 6. Start the Server
-
-Finally, launch the ASGI app with `uvicorn`, binding it to your chosen port (e.g. 58000):
-
-```python
-import uvicorn
-
-if __name__ == "__main__":
-    uvicorn.run(starlette_app, host="0.0.0.0", port=58000)
-```
-
-### 7. Run and Extend
-
-You can now save the script as `math_server.py` and start it with:
-
-```bash
-python math_server.py
-```
-
-We also define a second server — `weather_server.py` — listening on a different port (e.g., 58001) and offering a fake weather tool. That way, we’ll be able to run multiple servers in parallel on the same machine (or across machines, if desired).
-
-The full code — including both servers, client setup, and host logic — is available in our accompanying GitHub repository: [mcp-multi-server-demo](https://github.com/SeaSparks-GmbH/mcp-multi-server-demo).
-
-## Exemplary Client
-
-Now that the servers are running, we need to establish the "thin" client that allows the host to connect to the servers and their tools in a standardized way.
-
-To handle the connection, sessions and communication with the servers, we use and start with setting up a MultiServerClient class, which will hold all methods needed to  
-- initialize the connection to the servers  
-- request a list of all the tools that are served by the servers  
-- place calls to the tools from the host and communicate the results of the calls back to the host  
-- close the sessions gracefully
-
-The `__init__` just sets the stage for the connection to the servers (sse-endpoints) and the exit.
-
-```python
-from contextlib import AsyncExitStack
-
-class MultiServerClient:
-    def __init__(self, endpoints):
-        """
-        Initialize with a dictionary of {server_name: sse_url}.
-        Example:
-        {
-            "math_server": "http://127.0.0.1:58000/sse",
-            "weather_server": "http://127.0.0.1:58001/sse"
-        }
-        """
-        self.endpoints = endpoints
-        self.sessions = {}
-        self._exit_stack = AsyncExitStack()
-```
-
-Next, we define compact methods within the class to connect to all servers (initialization via SSE) and to close them when the connection is no longer needed. We use two lower-level MCP SDK elements for this: `sse_client` and `ClientSession`:
-
-```python
-from mcp.client.sse import sse_client
-from mcp import ClientSession
-
-async def connect_all(self):
-    for name, sse_url in self.endpoints.items():
-        read, write = await self._exit_stack.enter_async_context(sse_client(sse_url))
-        session = await self._exit_stack.enter_async_context(ClientSession(read, write))
-        await session.initialize()
-        self.sessions[name] = session
-        
-async def disconnect_all(self):
-    await self._exit_stack.aclose()
-```
-
-> **A Note on `ClientSession` and `sse_client`**
->
-> We're working directly with `ClientSession` and `sse_client` here — rather than using a high-level abstraction like `fastmcp` — for a reason.
->
-> - `sse_client()` opens a Server-Sent Events connection and returns a read/write stream pair.
-> - `ClientSession` wraps those streams into a structured MCP session, offering methods like `initialize()`, `list_tools()`, and `call_tool()`.
->
-> Libraries like `fastmcp` abstract this away, but doing it manually helps demystify how MCP “talks” — and shows just how lightweight and modular the protocol actually is.
-
-
-Finally, we need a method that produces a list of all tools from all server connections and another method to route a call to a given tool:
-
-```python
-async def list_all_tools(self):
-    all_tools = {}
-    for name, session in self.sessions.items():
-        tools_response = await session.list_tools()
-        all_tools[name] = tools_response.tools
-    return all_tools
-
-async def call(self, server_name, tool_name, args):
-    session = self.sessions.get(server_name)
-    if not session:
-        raise ValueError(f"No session for server '{server_name}'")
-    return await session.call_tool(tool_name, args)
-```
-
-That's already it for the client. We now move on to the third and final building block, the host.
-
-## Exemplary Host
-
-To complete our MCP architecture, we need a way to query an LLM and let it decide which tool to invoke. In this example, we'll use OpenAI's API, but you can easily swap it for any other LLM service or local model server—as long as the model is powerful enough to produce structured output and undeerstand our basic instructions.
-
-```python
-from openai import AsyncOpenAI
-
-# Replace this with your real key
-openai_key = "your-api-key-here"
-
-# Method to query the LLM
-async def query_llm(prompt):
-    llm_client = AsyncOpenAI(api_key=openai_key)
-    return await llm_client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}]
-    )
-```
-
-To keep the host compact and focused, we define a single function that accepts a user query and handles the rest. The function:
-
-- Initializes connections to all servers via our MCP client
-- Fetches the available tools from all registered servers
-- Constructs a prompt for the LLM including the tools and the user query
-- Sends the prompt to the LLM
-- Parses the LLM's structured JSON response to determine which tool to call
-- Calls the selected tool and returns the result
-- Gracefully disconnects from all servers
-
-```python
-import json
-
-async def run_host_query(user_input: str):
-    endpoints = {
-        "math_server": "http://127.0.0.1:58000/sse",
-        "weather_server": "http://127.0.0.1:58001/sse"
-    }
-
-    mcp_client = MultiServerClient(endpoints)
-    print("Connect to servers...")
-    await mcp_client.connect_all()
-
-    tools_by_server = await mcp_client.list_all_tools()
-    tool_summary = []
-    for server, tools in tools_by_server.items():
-        for tool in tools:
-            tool_summary.append(
-                f"server: {server}, tool: {tool.name}, description: {tool.description} input schema: {tool.inputSchema}"
-            )
-    print("Tool summaries:", tool_summary)
-
-    # Prompt to help LLM choose a tool
-    prompt = f"""
-You are a tool routing assistant. Choose the best tool for the user query. Available tools:
-
-{chr(10).join(tool_summary)}
-
-Given the user query: \"{user_input}\"
-Respond only with a JSON object like:
-{{"server": "math_server", "tool": "add", "args": {{"a": 3, "b": 5}}}}
-"""
-
-    response = await query_llm(prompt)
-    raw_content = response.choices[0].message.content
-
-    # Clean markdown formatting if included
-    cleaned_content = raw_content.strip().strip("```json").strip("```").strip()
-    parsed = json.loads(cleaned_content)
-    print("LLM chose:", parsed)
-
-    result = await mcp_client.call(parsed["server"], parsed["tool"], parsed["args"])
-    print("Tool result:", result)
-
-    await mcp_client.disconnect_all()
-```
-
-This host logic works well in a Jupyter notebook (useful if you want to adjust settings or try out things) or Python script. It’s intended to be a simple but clear, sequential example of how an LLM-powered host can dynamically interact with modular MCP services based on a single user query.
-
-## Results and Wrap-Up
-
-Once everything is up and running, you can call something like:
-
-```python
-await run_host_query("How many hours do 5 days have?")
-```
-
-And from the print statements, you'll get output like this:
-
-```
-Connect to servers...
-Tool summaries: [
-  "server: math_server, tool: add, description: Adds two integers input schema: {'type': 'object', 'required': ['a', 'b'], 'properties': {'a': {'type': 'integer', 'description': 'First number'}, 'b': {'type': 'integer', 'description': 'Second number'}}}", 
-  "server: math_server, tool: multiply, description: Multiplies two integers input schema: {'type': 'object', 'required': ['a', 'b'], 'properties': {'a': {'type': 'integer', 'description': 'First number'}, 'b': {'type': 'integer', 'description': 'Second number'}}}", 
-  "server: weather_server, tool: get_weather, description: Returns fake weather input schema: {'type': 'object', 'required': ['city'], 'properties': {'city': {'type': 'string', 'description': 'City to get the weather for'}}}"
-]
-LLM chose: {'server': 'math_server', 'tool': 'multiply', 'args': {'a': 5, 'b': 24}}
-Tool result: meta=None content=[TextContent(type='text', text='120', annotations=None)] isError=False
-```
-
-Here's what we see:
-- The servers respond to the `list_tools` request via the client, exactly as expected.
-- The LLM, using that tool metadata, selects the appropriate tool for the task.
-- The tool is called based on the LLM’s structured output — and gives the correct answer: 5 × 24 = **120** hours.
+In the meantime—go write your own talking vegetable memoirs or particle-riding rodent tales. Your agents are ready to read them.
 
 ## What’s Next?
 
-Our setup above is intentionally minimal. It’s meant to *illustrate* the inner workings of MCP using multiple servers and low-level SDK constructs. That clarity comes at the cost of abstraction — which is where higher-level libraries like `FastMCP` typically shine.
+Apart from the stories, our setup above is intentionally minimal. It’s meant to *illustrate* the workings of MCP together with a SmolAgent.
 
-Still, there’s plenty of room to build on what we’ve done:  
+So there’s plenty of room to build on what we’ve done:  
 - Automatically register tools via introspection, as hinted in the server section — to reduce redundancy and streamline tool definition.
 - Replace SSE with Streamable HTTP transport, the modern alternative now supported in MCP. (We may explore this in a follow-up article.)
 - Swap in your own LLM, whether it's a local model or a hosted one — or even build a fully self-hosted chain-of-reasoning setup.
 - Integrate libraries like LangChain or LangGraph to formalize and extend the system — using structured format instructions derived from tool metadata, and building more robust, composable prompting workflows.
 
-We’d love to hear your thoughts — especially if you’re experimenting with MCP in more complex or production-grade setups. Just [Email us](mailto:kontakt@seasparks.de).
+We’d love to hear your thoughts — especially if you’re experimenting with agents and MCP in more complex or production-grade setups. Just [Email us](mailto:kontakt@seasparks.de).
 
 Thanks for following along — and stay curious. Our AI journey is just getting started.
-
